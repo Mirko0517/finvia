@@ -19,11 +19,19 @@ class TransactionModel extends HiveObject {
   @HiveField(4)
   String category;
 
+  @HiveField(5)
+  String? description; // Nullable description
+
+  @HiveField(6)
+  bool isExpense; // Non-nullable, indicates if it's an expense
+
   TransactionModel({
     required this.id,
     required this.title,
     required this.amount,
     required this.date,
     required this.category,
+    this.description, // Optional in constructor
+    required this.isExpense,
   });
 }

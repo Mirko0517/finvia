@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 import '../../core/utils/auth_utils.dart';
 import '../../data/models/settings_model.dart';
-import '../main/home_page.dart';
+import '../main/screens/main_screen.dart'; // Changed import
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -33,13 +33,31 @@ class _AuthGateState extends State<AuthGate> {
       return;
     }
 
-    final result = await AuthUtils.authenticateUser();
-    setState(() {
-      _authorized = result;
-      _loading = false;
-    });
+    try {
+      final result = await AuthUtils.authenticateUser();
+      setState(() {
+        _authorized = result;
+        _loading = false;
+        _error = null; // Clear any previous error on success
+      });
+    } catch (e, s) {
+      String errorMessage = 'Ocurrió un error durante la autenticación.';
+      if (e is PlatformException) {
+        // You could map e.code to more specific Spanish messages here
+        // For example, based on local_auth/error_codes.dart
+        // if (e.code == 'LockedOut') errorMessage = 'Demasiados intentos. Intente más tarde.';
+        // if (e.code == 'NotEnrolled') errorMessage = 'No hay métodos de autenticación configurados.';
+        errorMessage = e.message ?? errorMessage;
+      }
+      print('Authentication error: $e');
+      print('Stack trace: $s');
+      setState(() {
+        _authorized = false;
+        _loading = false;
+        _error = errorMessage;
+      });
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +109,13 @@ class _AuthGateState extends State<AuthGate> {
               ],
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _authenticate,
+                onPressed: () {
+                  setState(() {
+                    _error = null;
+                    _loading = true;
+                  });
+                  _authenticate();
+                },
                 icon: const Icon(Icons.fingerprint),
                 label: const Text('Autenticarse'),
                 style: ElevatedButton.styleFrom(
@@ -107,6 +131,6 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
-    return const HomePage();
+    return const MainScreen(); // Changed to MainScreen
   }
 }

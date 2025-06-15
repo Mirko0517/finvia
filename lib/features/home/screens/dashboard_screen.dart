@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../../data/models/transaction_model.dart';
-import '../../../data/models/settings_model.dart';
-import '../../../core/utils/currency_utils.dart';
-import '../widgets/animated_card.dart';
+import 'package:finvia_flutter/widgets/animated_card.dart'; // Corrected import
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../../core/utils/currency_utils.dart';
+import '../../../data/models/settings_model.dart';
+import '../../../data/models/transaction_model.dart';
 import '../../../features/transactions/screens/new_transaction_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -83,16 +86,19 @@ class DashboardScreen extends StatelessWidget {
     final box = Hive.box<TransactionModel>('transactions');
     final monthTx = box.values.where((tx) =>
       tx.date.year == now.year && tx.date.month == now.month).toList();
-    final income = monthTx.where((tx) => tx.amount > 0).fold(0.0, (s, tx) => s + tx.amount);
-    final expenses = monthTx.where((tx) => tx.amount < 0).fold(0.0, (s, tx) => s + tx.amount);
-    final balance = settings.monthlySalary + income + expenses;
+
+    // Updated financial logic using isExpense
+    final income = monthTx.where((tx) => !tx.isExpense).fold(0.0, (s, tx) => s + tx.amount);
+    final expenses = monthTx.where((tx) => tx.isExpense).fold(0.0, (s, tx) => s + tx.amount);
+    // Balance: salary + all income transactions - all expense transactions
+    final balance = settings.monthlySalary + income - expenses;
 
     final lastTx = box.values.toList().reversed.take(5).toList();
 
-    // Calcular estadísticas por categoría
+    // Calcular estadísticas por categoría (solo gastos)
     final categoryStats = <String, double>{};
-    for (var tx in monthTx.where((tx) => tx.amount < 0)) {
-      categoryStats[tx.category] = (categoryStats[tx.category] ?? 0) + tx.amount.abs();
+    for (var tx in monthTx.where((tx) => tx.isExpense)) { // Filter by isExpense = true
+      categoryStats[tx.category] = (categoryStats[tx.category] ?? 0) + tx.amount; // Amount is already positive
     }
 
     // Encontrar la categoría con más gastos
@@ -177,7 +183,8 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           Expanded(
                             child: Text(
-                              '$symbol${expenses.abs().toStringAsFixed(0)}',
+                              // expenses is now sum of positive numbers
+                              '$symbol${expenses.toStringAsFixed(0)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red[700],
@@ -249,12 +256,14 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   _buildStatCard(
                     'Total gastos',
-                    '$symbol${expenses.abs().toStringAsFixed(0)}',
+                    // expenses is now sum of positive numbers
+                    '$symbol${expenses.toStringAsFixed(0)}',
                     Icons.trending_down,
                     Colors.red.shade300,
                   ),
                   _buildStatCard(
                     'Total ingresos',
+                    // income is only extra income, salary is base
                     '$symbol${(income + settings.monthlySalary).toStringAsFixed(0)}',
                     Icons.trending_up,
                     Colors.green.shade300,
@@ -304,17 +313,20 @@ class DashboardScreen extends StatelessWidget {
                               leading: CircleAvatar(
                                 backgroundColor: Colors.grey[100],
                                 child: Icon(
-                                  tx.amount > 0 ? Icons.add : Icons.remove,
-                                  color: tx.amount > 0 ? Colors.teal[300] : Colors.red[300],
+                                  !tx.isExpense ? Icons.add : Icons.remove, // Use isExpense
+                                  color: !tx.isExpense ? Colors.teal[300] : Colors.red[300], // Use isExpense
                                 ),
                               ),
                               title: Text(tx.title),
                               subtitle: Text(tx.category),
                               trailing: Text(
+                                // Amount is already correctly signed for display if needed,
+                                // but usually we show absolute for list items and color indicates type.
+                                // Here, the amount should be positive for both, color indicates type.
                                 '$symbol${tx.amount.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: tx.amount > 0 ? Colors.teal[700] : Colors.red[700],
+                                  color: !tx.isExpense ? Colors.teal[700] : Colors.red[700], // Use isExpense
                                 ),
                               ),
                             ),
