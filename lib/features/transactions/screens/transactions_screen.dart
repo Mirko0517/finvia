@@ -63,24 +63,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Map<String, double> _calculateMonthlyStats(List<TransactionModel> transactions) {
-    final now = DateTime.now();
-
+    // Use _selectedMonth instead of DateTime.now()
     final monthTransactions = transactions.where((tx) =>
-      tx.date.year == now.year && tx.date.month == now.month
+      tx.date.year == _selectedMonth.year && tx.date.month == _selectedMonth.month
     ).toList();
 
-    // Corregimos el cálculo de gastos (montos negativos)
+    // Updated logic using isExpense (amounts are positive for expenses in model)
     final expenses = monthTransactions
-        .where((tx) => tx.amount <= 0) // Cambiamos a <= para incluir transacciones de 0
-        .fold(0.0, (sum, tx) => sum - tx.amount); // Cambiamos el signo aquí
+        .where((tx) => tx.isExpense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
 
-    // Solo los montos positivos son ingresos extra
+    // extraIncome are transactions that are not expenses
     final extraIncome = monthTransactions
-        .where((tx) => tx.amount > 0)
+        .where((tx) => !tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     return {
-      'expenses': expenses,
+      'expenses': expenses, // This is now a sum of positive amounts
       'extraIncome': extraIncome,
     };
   }
@@ -143,9 +142,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   builder: (context, Box<SettingsModel> settingsBox, _) {
                     final settings = settingsBox.get('user')!;
                     final currencySymbol = getCurrencySymbol(settings.currency);
+                    // Corrected balance calculation: expenses are already positive
                     final balance = settings.monthlySalary +
                         monthlyStats['extraIncome']! -
-                        monthlyStats['expenses']!.abs();
+                        monthlyStats['expenses']!;
 
                     return filtered.isEmpty
                         ? Center(
@@ -177,10 +177,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                   leading: CircleAvatar(
                                     backgroundColor: Theme.of(context).colorScheme.surface,
                                     child: Icon(
-                                      tx.amount > 0 ? Icons.add : Icons.remove,
-                                      color: tx.amount > 0
+                                      !tx.isExpense ? Icons.add : Icons.remove, // Use isExpense
+                                      color: !tx.isExpense
                                         ? Colors.teal[300]
-                                        : Colors.red[300],
+                                        : Colors.red[300], // Use isExpense
                                     ),
                                   ),
                                   title: Text(tx.title),
@@ -189,12 +189,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                   trailing: Text(
+                                    // Amount is positive for both, color indicates type
                                     '$currencySymbol${tx.amount.toStringAsFixed(0)}',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: tx.amount > 0
+                                      color: !tx.isExpense
                                         ? Colors.teal[300]
-                                        : Colors.red[300],
+                                        : Colors.red[300], // Use isExpense
                                     ),
                                   ),
                                 ),

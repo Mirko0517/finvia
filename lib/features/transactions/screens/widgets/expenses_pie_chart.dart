@@ -26,8 +26,9 @@ class ExpensesPieChart extends StatelessWidget {
 
     final totals = <String, double>{};
     for (var tx in filtered) {
-      if (tx.amount < 0) { // Solo considerar gastos
-        totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount.abs();
+      if (tx.isExpense) { // Use isExpense field
+        // Amount is already positive for expenses if isExpense is true
+        totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
       }
     }
     return totals;

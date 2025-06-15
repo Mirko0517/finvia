@@ -19,20 +19,21 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
   void _saveTransaction() {
     if (!_formKey.currentState!.validate()) return;
 
-    // Convertimos el monto a número
-    final amount = double.parse(_amountController.text);
+    // Get the amount and ensure it's positive
+    final double amount = double.parse(_amountController.text).abs();
 
-    // Si es un gasto, lo convertimos a negativo
-    final isExpense = _selectedCategory != 'Ingreso'; // Agregamos esta línea
-    final finalAmount = isExpense ? -amount.abs() : amount;
+    // Determine if it's an expense
+    final bool isExpense = _selectedCategory != 'Ingreso';
 
     final box = Hive.box<TransactionModel>('transactions');
     final newTx = TransactionModel(
-      id: box.length + 1,
+      id: box.length + 1, // Consider a more robust ID generation for production apps
       title: _titleController.text,
-      amount: finalAmount, // Usamos el monto procesado
+      amount: amount, // Store positive amount
       date: _selectedDate,
       category: _selectedCategory,
+      isExpense: isExpense, // Set the isExpense flag
+      // description field is optional and will default to null
     );
 
     box.add(newTx);
