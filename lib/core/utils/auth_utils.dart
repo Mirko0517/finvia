@@ -16,7 +16,7 @@ class AuthUtils {
         throw PlatformException(
           code: auth_error.notAvailable,
           message:
-              'La autenticación biométrica no está disponible en este dispositivo.',
+              'No hay métodos de autenticación seguros configurados en este dispositivo.',
         );
       }
 
